@@ -48,7 +48,9 @@ const Home = () => {
         <div className="bg-gradient-to-r from-primary to-secondary rounded-2xl p-6 text-primary-foreground">
           <div className="flex items-center gap-3 mb-2">
             <Heart className="h-6 w-6" />
-            <h2 className="text-xl font-bold">Welcome, {user?.name}!</h2>
+            <h2 className="text-2xl font-bold ">
+  Welcome, {user?.displayName ? user.displayName.split(' ')[0] : "Friend"}!
+</h2>
           </div>
           <p className="text-primary-foreground/90 text-sm">
             Your health journey starts here. Explore our services below.

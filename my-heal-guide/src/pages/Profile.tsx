@@ -1,87 +1,94 @@
-import { Header } from '@/components/Header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { User, Mail, LogOut, Settings, Bell, Heart, FileText } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useAuth } from "@/contexts/AuthContext";
+import { Header } from "@/components/Header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LogOut, User, Mail, Phone, MapPin, Package, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/auth');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Failed to logout", error);
+    }
   };
 
-  const menuItems = [
-    { icon: Settings, label: 'Account Settings', action: () => {} },
-    { icon: Bell, label: 'Notifications', action: () => {} },
-    { icon: Heart, label: 'My Appointments', action: () => {} },
-    { icon: FileText, label: 'My Orders', action: () => {} },
-  ];
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header title="Profile" showBack showCart />
-      
-      <main className="container py-6 space-y-6">
-        {/* Profile Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-3xl text-primary-foreground">
-                {user?.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-2xl">{user?.name}</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-2">
-                  <Mail className="h-4 w-4" />
-                  {user?.email}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+    <div className="min-h-screen bg-background pb-20">
+      <Header title="My Profile" showBack />
 
-        {/* Menu Items */}
+      <main className="container py-6 space-y-6">
+        {/* User Info Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {menuItems.map((item, index) => (
-              <div key={item.label}>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={item.action}
-                >
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.label}
-                </Button>
-                {index < menuItems.length - 1 && <Separator className="my-1" />}
-              </div>
-            ))}
+          <CardContent className="pt-6 flex flex-col items-center text-center">
+            <Avatar className="h-24 w-24 mb-4">
+              <AvatarImage src={user.photoURL || ""} />
+              <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                {user.displayName?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            
+            <h2 className="text-2xl font-bold">{user.displayName || "User"}</h2>
+            <p className="text-muted-foreground">{user.email}</p>
+
           </CardContent>
         </Card>
 
-        {/* Logout Button */}
-        <Button
-          variant="destructive"
-          className="w-full"
-          size="lg"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5 mr-2" />
-          Logout
-        </Button>
-
-        <div className="text-center text-sm text-muted-foreground">
-          <p>HealthCare App v1.0</p>
-          <p className="mt-1">© 2024 All rights reserved</p>
+        {/* Personal Details */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold px-1">Personal Details</h3>
+          <Card>
+            <CardContent className="p-0">
+              <div className="flex items-center p-4 border-b">
+                <User className="h-5 w-5 text-muted-foreground mr-3" />
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Full Name</p>
+                  <p className="font-medium">{user.displayName || "Not set"}</p>
+                </div>
+              </div>
+              <div className="flex items-center p-4">
+                <Mail className="h-5 w-5 text-muted-foreground mr-3" />
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium">{user.email}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Dashboard Links */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="hover:bg-accent/5 transition-colors cursor-pointer">
+            <CardContent className="pt-6 flex flex-col items-center">
+              <Package className="h-8 w-8 text-primary mb-2" />
+              <span className="font-medium">My Orders</span>
+            </CardContent>
+          </Card>
+          <Card className="hover:bg-accent/5 transition-colors cursor-pointer">
+            <CardContent className="pt-6 flex flex-col items-center">
+              <Calendar className="h-8 w-8 text-primary mb-2" />
+              <span className="font-medium">Appointments</span>
+            </CardContent>
+          </Card>
+        </div>
+        
+            <Button 
+              variant="outline" 
+              className="mt-6 w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
       </main>
     </div>
   );
