@@ -5,20 +5,63 @@ import { useCart } from '@/contexts/CartContext';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from "@/contexts/AuthContext";
+import { placeMedicineOrder } from "@/lib/db"; // Import the DB function
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleCheckout = () => {
-    toast({
-      title: "Order Placed!",
-      description: `Your order of ₹${totalPrice} has been confirmed. Delivery in 2-3 days.`,
-    });
-    clearCart();
-    navigate('/');
+  const handleCheckout = async () => {
+    // 1. Check Authentication
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please log in to place an order.",
+      });
+      navigate("/auth");
+      return;
+    }
+
+    // 2. Prepare Order Data
+    // Note: In a real app, you would add an input field for the address. 
+    // For now, we are sending a placeholder or you could prompt the user.
+    const deliveryAddress = "Dhaka, Bangladesh"; 
+
+    try {
+      // 3. Send to Firebase
+      const result = await placeMedicineOrder(
+        user.uid,
+        cart,
+        totalPrice,
+        deliveryAddress
+      );
+
+      if (result.success) {
+        // 4. Handle Success
+        clearCart(); // Empty the cart locally
+        toast({
+          title: "Order Placed Successfully!",
+          description: `Order ID: ${result.id}`,
+        });
+        navigate("/"); // Redirect to Home or Profile
+      } else {
+        throw new Error("Order creation failed");
+      }
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: "Something went wrong. Please try again.",
+      });
+    }
   };
+
+  // --- UI REMAINS THE SAME BELOW ---
 
   if (cart.length === 0) {
     return (

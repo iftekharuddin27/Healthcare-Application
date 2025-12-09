@@ -1,93 +1,74 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-
-interface User {
-  email: string;
-  name: string;
-}
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { 
+  User, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  updateProfile
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  isLoading: boolean;
+  loading: boolean;
+  login: (email: string, pass: string) => Promise<void>;
+  register: (name: string, email: string, pass: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
 
+  // 1. LISTEN TO AUTH STATE
+  // This useEffect runs once when the app starts. It asks Firebase:
+  // "Is there a user already logged in?"
   useEffect(() => {
-    const storedUser = localStorage.getItem('healthUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false); // Done loading
+    });
+    return () => unsubscribe();
   }, []);
 
-  const signup = async (email: string, password: string, name: string) => {
-    const users = JSON.parse(localStorage.getItem('healthUsers') || '[]');
-    
-    if (users.find((u: any) => u.email === email)) {
-      throw new Error('User already exists');
-    }
-
-    const newUser = { email, password, name };
-    users.push(newUser);
-    localStorage.setItem('healthUsers', JSON.stringify(users));
-    
-    const userData = { email, name };
-    localStorage.setItem('healthUser', JSON.stringify(userData));
-    setUser(userData);
-    
-    toast({
-      title: "Welcome!",
-      description: "Your account has been created successfully.",
-    });
+  // 2. LOGIN FUNCTION
+  const login = async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(auth, email, pass);
   };
 
-  const login = async (email: string, password: string) => {
-    const users = JSON.parse(localStorage.getItem('healthUsers') || '[]');
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
-    
-    if (!foundUser) {
-      throw new Error('Invalid credentials');
+  // 3. REGISTER FUNCTION
+  const register = async (name: string, email: string, pass: string) => {
+    // Create account
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    // Add their name to the profile
+    if (userCredential.user) {
+      await updateProfile(userCredential.user, {
+        displayName: name,
+      });
+      // Force update local state to show the name immediately
+      setUser({ ...userCredential.user, displayName: name });
     }
-
-    const userData = { email: foundUser.email, name: foundUser.name };
-    localStorage.setItem('healthUser', JSON.stringify(userData));
-    setUser(userData);
-    
-    toast({
-      title: "Welcome back!",
-      description: "You've successfully logged in.",
-    });
   };
 
-  const logout = () => {
-    localStorage.removeItem('healthUser');
-    setUser(null);
-    toast({
-      title: "Logged out",
-      description: "You've been logged out successfully.",
-    });
+  // 4. LOGOUT FUNCTION
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
-      {children}
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

@@ -4,9 +4,12 @@ import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useAuth } from "@/contexts/AuthContext";
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
+import { bookAppointment } from "@/lib/db";
 import { Badge } from '@/components/ui/badge';
+
 
 const timeSlots = [
   '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -15,27 +18,44 @@ const timeSlots = [
 
 const BookAppointment = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
 
-  const handleBooking = () => {
-    if (!date || !selectedTime) {
+  const handleConfirm = async () => {
+    if (!date || !selectedSlot || !user) {
       toast({
         variant: "destructive",
-        title: "Missing information",
-        description: "Please select both date and time",
+        title: "Error",
+        description: "Please log in and select a date/time.",
       });
       return;
     }
 
-    toast({
-      title: "Appointment Booked!",
-      description: `Your appointment is confirmed for ${date.toDateString()} at ${selectedTime}`,
-    });
-    
-    navigate('/');
+    // Call our database function
+    const result = await bookAppointment(
+      user.uid,           // User ID
+      id || "unknown",    // Doctor ID from URL
+      "Dr. Smith",        // Ideally, fetch real doctor name
+      date,               // Selected Date
+      selectedSlot        // Selected Time
+    );
+
+    if (result.success) {
+      toast({
+        title: "Success!",
+        description: "Appointment booked successfully.",
+      });
+      navigate("/"); // Go back home
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Failed",
+        description: "Could not book appointment. Try again.",
+      });
+    }
   };
 
   return (
@@ -67,9 +87,9 @@ const BookAppointment = () => {
               {timeSlots.map(time => (
                 <Badge
                   key={time}
-                  variant={selectedTime === time ? "default" : "outline"}
+                  variant={selectedSlot === time ? "default" : "outline"}
                   className="cursor-pointer justify-center py-3 text-sm"
-                  onClick={() => setSelectedTime(time)}
+                  onClick={() => setSelectedSlot(time)}
                 >
                   {time}
                 </Badge>
@@ -78,7 +98,7 @@ const BookAppointment = () => {
           </CardContent>
         </Card>
 
-        <Button onClick={handleBooking} className="w-full" size="lg">
+        <Button onClick={handleConfirm} className="w-full" size="lg">
           Confirm Appointment
         </Button>
       </main>

@@ -10,29 +10,53 @@ import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const { login, signup } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setLoading(true); // Start loading spinner
+
     try {
       if (isLogin) {
+        // CALL NEW FIREBASE LOGIN
         await login(email, password);
+        toast({
+          title: "Welcome back!",
+          description: "Successfully logged in.",
+        });
       } else {
-        await signup(email, password, name);
+        // CALL NEW FIREBASE REGISTER
+        await register(name, email, password);
+        toast({
+          title: "Account created!",
+          description: "Welcome to Medico.",
+        });
       }
-      navigate('/');
+      // If successful, go to home
+      navigate("/");
     } catch (error: any) {
+      // HANDLE FIREBASE ERRORS
+      console.error(error);
+      let message = "Something went wrong.";
+      
+      // Translate Firebase error codes to human text
+      if (error.code === 'auth/invalid-credential') message = "Wrong email or password.";
+      if (error.code === 'auth/email-already-in-use') message = "This email is already registered.";
+      if (error.code === 'auth/weak-password') message = "Password should be at least 6 characters.";
+
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Something went wrong",
+        description: message,
       });
+    } finally {
+      setLoading(false); // Stop loading spinner
     }
   };
 
